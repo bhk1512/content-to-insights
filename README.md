@@ -2,7 +2,10 @@
 
 Auto-summarises YouTube talks into clean, skimmable notes (MD → optional PDF) and tracks processed videos in a Google Sheet. Import the JSONs, wire your own credentials, and run.
 
-![Flow](assets/Collect Videos.png)
+![Flow](assets/Collect-Videos.png)
+![Flow](assets/Create-Files.png)
+![Flow](assets/Collect-Videos.png)
+![Flow](assets/Collect-Videos.png)
 
 ## Problem → Action → Result → Learnings (concise)
 **Problem** — Watching and filing each tech talk took ~4 hours; insights scattered across docs.  
