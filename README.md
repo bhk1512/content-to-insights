@@ -4,8 +4,8 @@ Auto-summarises YouTube talks into clean, skimmable notes (MD → optional PDF) 
 
 ![Flow](assets/Collect-Videos.png)
 ![Flow](assets/Create-Files.png)
-![Flow](assets/Collect-Videos.png)
-![Flow](assets/Collect-Videos.png)
+![Flow](assets/De-Duplication.png)
+![Flow](assets/Fetch-Transcript-and-Analyze.png)
 
 ## Problem → Action → Result → Learnings (concise)
 **Problem** — Watching and filing each tech talk took ~4 hours; insights scattered across docs.  
