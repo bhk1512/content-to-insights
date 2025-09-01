@@ -1,0 +1,210 @@
+{
+  "name": "Create FIles",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "77a9c5b8-1d52-4714-9d32-1f0298a097a5",
+      "name": "Respond (JSON)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        32,
+        176
+      ]
+    },
+    {
+      "parameters": {
+        "fileName": "={{$json.fullPath}}",
+        "dataPropertyName": "inbound",
+        "options": {}
+      },
+      "id": "507c05b5-3152-477f-b19c-2ed8299ed781",
+      "name": "Write Binary File (input)",
+      "type": "n8n-nodes-base.writeBinaryFile",
+      "typeVersion": 1,
+      "position": [
+        -640,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -416,
+        176
+      ],
+      "id": "0cee7cc8-57a1-41d1-97df-a44b9d80184d",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "aa2dde5c-3ab2-444e-b1a4-0e9547e3b32d",
+      "typeVersion": 1.1,
+      "name": "When Executed by Another Workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "position": [
+        -1312,
+        176
+      ]
+    },
+    {
+      "parameters": {
+        "executeOnce": false,
+        "command": "={{ 'node \" '+ ($env.CTI_MD2PDF || 'md-to-pdf.mjs') + '\" \"' + $json.fullPath + '\" \"' + $json.outPdf + '\"' }}\n"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        -192,
+        176
+      ],
+      "id": "3c9757f8-4abe-4d1f-9116-c2cf7dae564a",
+      "name": "Execute Command: MD → PDF"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a3a52f15-b7d2-4409-857d-c5660f7ed186",
+              "name": "content",
+              "value": "={{$json.content  ?? ''}}",
+              "type": "string"
+            },
+            {
+              "id": "11647c25-ed05-4ad1-9c5c-ef2ec358e640",
+              "name": "format",
+              "value": "={{$json.format ?? ''}}",
+              "type": "string"
+            },
+            {
+              "id": "2aed4880-9727-4849-a66d-f72949827eca",
+              "name": "filename",
+              "value": "={{$json.filename ?? ''}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1088,
+        176
+      ],
+      "id": "d7126a44-6a87-4574-8bf8-80f0261e1a04",
+      "name": "Set Fields"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const fname = (($json.filename || 'report') + '').replace(/[^a-z0-9-_]/gi, '_');\nconst ext = 'md';\nconst content = ($json.content || '');\n\n// Make binary from text so Write Binary File can persist it\nconst data = Buffer.from(content, 'utf8').toString('base64');\n\nconst base = ($env.CTI_BASE_DIR || '/tmp/cti');\nconst inputDir = base.replace(/\/+$/,'') + '/input';\nconst outDir   = base.replace(/\/+$/,'') + '/out';\n\nitem.json.fname = fname;\nitem.json.ext = ext;\nitem.json.fullPath = `${inputDir}/${fname}.${ext}`;\nitem.json.outHtml = `${outDir}/${fname}.html``;\nitem.json.outPdf  = `${outDir}/${fname}.pdf`;\n\nitem.binary = item.binary || {};\nitem.binary.inbound = {\n  data,\n  fileName: item.json.fullPath,\n  mimeType: ext === 'md' ? 'text/markdown' : 'text/html'\n};\n\nreturn item;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -864,
+        176
+      ],
+      "id": "7c5f613a-c58a-4ef9-9bb2-22dd3b34466f",
+      "name": "Set Environment"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Write Binary File (input)": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Execute Command: MD → PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Set Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Command: MD → PDF": {
+      "main": [
+        [
+          {
+            "node": "Respond (JSON)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Fields": {
+      "main": [
+        [
+          {
+            "node": "Set Environment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Environment": {
+      "main": [
+        [
+          {
+            "node": "Write Binary File (input)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "c812ba01-10aa-489f-ad71-f6d05c5a53a6",
+  "meta": {
+    "instanceId": "475daac84cac0803a26cc78d72459f365d29a76e384de860efeb8e77b778ad67"
+  },
+  "id": "SGCvo6xFZzC00pc8",
+  "tags": []
+}

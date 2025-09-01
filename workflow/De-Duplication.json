@@ -1,0 +1,294 @@
+{
+  "name": "De-Duplication",
+  "nodes": [
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b8cc786e-e8bb-45c7-b804-98e3dc3e988f",
+              "leftValue": "={{ $json.inSheet }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        480,
+        0
+      ],
+      "id": "523ec52a-e647-45e0-8e1b-66c8485a7db1",
+      "name": "inSheet_Channel1"
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/youtube/v3/videos",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "youTubeOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "id",
+              "value": "={{ $json.items.snippet.resourceId.videoId }}"
+            },
+            {
+              "name": "part",
+              "value": "snippet"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        704,
+        0
+      ],
+      "id": "be1400a8-3217-4ebd-94bd-4850b2423d5b",
+      "name": "Get Video Details_Channel1",
+      "retryOnFail": true,
+      "credentials": {
+        "youTubeOAuth2Api": {
+          "id": "yjYbLF8zXRkVAFaJ",
+          "name": "YouTube account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": "Fetch Transcript  and Analyze"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        928,
+        0
+      ],
+      "id": "1c6e620c-8d1d-4dec-b2a8-1e90aa29e8a1",
+      "name": "Execute Workflow1"
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -416,
+        0
+      ],
+      "id": "cd8257b4-b790-4ba7-a64a-728163e8d16d",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "items",
+        "include": "selectedOtherFields",
+        "fieldsToInclude": "snippet.title",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        -192,
+        -96
+      ],
+      "id": "66b4825f-3a9d-4083-8f98-c6ce511253d4",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": "Content to Insights",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1VZw2powkmLbMnlSjtDBPV8qkDZ-NG0b0afx-_mjUCgo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Videos",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1VZw2powkmLbMnlSjtDBPV8qkDZ-NG0b0afx-_mjUCgo/edit#gid=0"
+        },
+        "options": {
+          "dataLocationOnSheet": {
+            "values": {
+              "rangeDefinition": "specifyRangeA1",
+              "range": "A:C"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        -192,
+        96
+      ],
+      "id": "4179052a-ae03-42df-b6cf-99d1e13fb18a",
+      "name": "Fetch Processed Video List",
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        32,
+        0
+      ],
+      "id": "03ec03e8-5e29-45c0-a7d3-af01848f8dfc",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Read upstream data by node name (adjust names if different)\nconst videos   = $items('Split Out');      // N items\nconst sheetRows = $items('Fetch Processed Video List');   // M rows\n\n// Build a Set of normalized IDs from the sheet (handles raw ID or URL)\nconst sheetIds = new Set();\nfor (const r of sheetRows) {\n  let s = String(r.json['Video ID'] ?? r.json['Video URL'] ?? '').trim();\n  if (!s) continue;\n  if (s.startsWith('http')) {\n    try {\n      const u = new URL(s);\n      s = u.searchParams.get('v') || u.pathname.split('/').filter(Boolean).pop() || s;\n    } catch {}\n  }\n  sheetIds.add(s);\n}\n\n// Left-join: one output per video with inSheet flag\nreturn videos.map(v => {\n  \n   const id = String(v.json?.items?.snippet?.resourceId?.videoId ?? '').trim();\n\n  v.json.inSheet = sheetIds.has(id);\n  // (Optional) keep the normalized id for debugging\n  // v.json.videoId = id;\n  return v;\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        256,
+        0
+      ],
+      "id": "cb7f8fe1-f582-4202-94e5-3bb87f1f88aa",
+      "name": "InSheet_Channel"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "inSheet_Channel1": {
+      "main": [
+        [
+          {
+            "node": "Get Video Details_Channel1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Video Details_Channel1": {
+      "main": [
+        [
+          {
+            "node": "Execute Workflow1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Processed Video List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Processed Video List": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "InSheet_Channel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "InSheet_Channel": {
+      "main": [
+        [
+          {
+            "node": "inSheet_Channel1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "dd3a451b-1cb4-4e57-9041-b37951ac385d",
+  "meta": {
+    "instanceId": "475daac84cac0803a26cc78d72459f365d29a76e384de860efeb8e77b778ad67"
+  },
+  "id": "XmTyZyANp9ciwsRW",
+  "tags": []
+}

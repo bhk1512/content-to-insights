@@ -1,0 +1,594 @@
+{
+  "name": "Fetch Transcript  and Analyze",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "c055762a-8fe7-4141-a639-df2372f30060",
+      "typeVersion": 1.1,
+      "name": "When Executed by Another Workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "position": [
+        -880,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are an expert content summarizer + storyteller.\nYour goal is to make the transcript below engaging, sharp, and easy to skim for a professional reader.\n\nGiven the transcript, please deliver (Start directly with the format, nothing to be written before it, no here is your output or anything):\n\n🎬 Video Context\n\nChannel: {{$json.items[0].snippet.channelTitle}}\n\nTitle: {{$json.items[0].snippet.title}}\n\n📌 Crisp Summary (200–300 words)\n\nWrite in a clear, storytelling style.\n\nUse short sentences and engaging flow.\n\nInclude key facts, examples, and arguments without unnecessary fluff.\n\n💡 Key Learnings (5–7 bullets)\n\nEach point should be short, actionable, and punchy.\n\nAdd a relevant emoji per point for visual engagement.\n\n📊 Optional Visuals (Dont write this as a title in the output)\n\nIf the transcript lends itself, suggest a diagram, chart, or simple framework (e.g., 2x2, funnel, flow).\n\nPresent it as text or simple ASCII sketch (so it’s portable).\n\nTone Guide\n\nCrisp, engaging, not academic.\n\nUse formatting (bold, emojis, dashes) so it’s skimmable.\n\nMake it look like something people would want to share in a LinkedIn post or team update.\n\nTranscript:\n{{ $json.content }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1,
+      "position": [
+        16,
+        496
+      ],
+      "id": "1075d973-edae-4693-9061-ec391c1af038",
+      "name": "Message a model",
+      "retryOnFail": true,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "yuuUDryYiacSOJx3",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -208,
+        400
+      ],
+      "id": "b58bd526-23cd-4bff-adad-d2d15eebde0e",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a43e8c74-f467-458d-abf1-103b08e1b90c",
+              "leftValue": "={{$json.items[0].snippet.title}}",
+              "rightValue": "Private video",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -704,
+        128
+      ],
+      "id": "d3a3b7c9-4873-4d56-9ef0-9d3b643f8e3b",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1040,
+        400
+      ],
+      "id": "1c871fd3-54cb-47d9-a2bb-333218bdfcde",
+      "name": "Merge2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "04a5a4d6-5676-4986-abbe-f63c664aab8c",
+              "name": "raw_transcript",
+              "value": "={{ $json.content }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        816,
+        304
+      ],
+      "id": "b7118a11-607d-4373-9cf4-4ed85e2665db",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": "Content to Insights",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1VZw2powkmLbMnlSjtDBPV8qkDZ-NG0b0afx-_mjUCgo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Videos",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1VZw2powkmLbMnlSjtDBPV8qkDZ-NG0b0afx-_mjUCgo/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Key Learnings": "={{ $json.keyLearnings }}",
+            "Summary": "={{ $json.summary }}",
+            "Transcript": "={{ $json.raw_transcript }}",
+            "Transcript Status": "={{\"Done\"}}",
+            "Video ID": "={{$json.items[0].id}}",
+            "Title": "={{$json.items[0].snippet.title}}",
+            "Channel ID": "={{$json.items[0].snippet.channelTitle}}",
+            "Cleaned Markdown": "={{ $json.cleanedMarkdown }}"
+          },
+          "matchingColumns": [
+            "Video ID"
+          ],
+          "schema": [
+            {
+              "id": "Title",
+              "displayName": "Title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Video URL",
+              "displayName": "Video URL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Video ID",
+              "displayName": "Video ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Channel URL",
+              "displayName": "Channel URL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Channel ID",
+              "displayName": "Channel ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Playlist URL",
+              "displayName": "Playlist URL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Transcript Status",
+              "displayName": "Transcript Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Transcript",
+              "displayName": "Transcript",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Summary",
+              "displayName": "Summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Key Learnings",
+              "displayName": "Key Learnings",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Cleaned Markdown",
+              "displayName": "Cleaned Markdown",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        1264,
+        304
+      ],
+      "id": "6b09e758-0cb6-4be6-813a-a35d9ad0aeb1",
+      "name": "Append or update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "getTranscript",
+        "videoId": "={{$json.items[0].id}}",
+        "text": true
+      },
+      "type": "n8n-nodes-supadata.supadata",
+      "typeVersion": 1,
+      "position": [
+        -432,
+        480
+      ],
+      "id": "2e3922b5-c087-4ba5-973d-dc63e7847334",
+      "name": "Get transcript",
+      "retryOnFail": true,
+      "credentials": {
+        "supadataApi": {
+          "id": "",
+          "name": "Supadata account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "markdownToHtml",
+        "markdown": "={{ $json.cleanedMarkdown }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.markdown",
+      "typeVersion": 1,
+      "position": [
+        592,
+        496
+      ],
+      "id": "e3a8aabb-09f5-42d9-917d-71d7ef74ddf1",
+      "name": "Markdown"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": "Create FIles"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1488,
+        400
+      ],
+      "id": "f0c2efcf-fccc-4063-b1d5-25aab2708f35",
+      "name": "Execute Workflow"
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => {\n  const raw = (item.json?.content?.parts?.[0]?.text ?? \"\").toString(); // ← use item.json, not $input.first()\n  let md = raw.replace(/\\\\n/g, '\\n').trim();\n  md = md\n    .replace(/^\\*\\s{2,}/gm, '* ')\n    .replace(/(^|\\n)\\*\\*(.+?)\\*\\*($|\\n)/g, (m,a,b,c) => `${a}\\n**${b.trim()}**\\n`)\n    .replace(/\\n{3,}/g, '\\n\\n')\n    .replace(/^\\*\\*(.+?)\\*\\*$/m, (_, t) => `# ${t.trim()}`)\n    .replace(/^\\*\\*(\\d+\\.\\s+.+?)\\*\\*$/gm, '## $1');\n\n  item.json.cleanedMarkdown = md;\n  return item;\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        368,
+        496
+      ],
+      "id": "8a0c1e7a-9d8c-4274-94d3-13a62d897e6d",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "jsCode": "// n8n Code node (JavaScript)\n\nfunction extractBetween(src, startRe, endRes = []) {\n  const start = src.search(startRe);\n  if (start === -1) return null;\n\n  const afterHeader = src.slice(src.indexOf(\"\\n\", start) + 1);\n  let endIdx = afterHeader.length;\n\n  for (const re of endRes) {\n    const m = afterHeader.search(re);\n    if (m !== -1) endIdx = Math.min(endIdx, m);\n  }\n  return afterHeader.slice(0, endIdx).trim();\n}\n\nfunction parseTitle(src) {\n  const m = src.match(/\\bTitle:\\s*(.+)\\s*$/m);\n  return m ? m[1].trim() : null;\n}\n\nfunction parseSummary(src) {\n  const block = extractBetween(\n    src,\n    /^[ \\t]*(?:📌\\s*)?Crisp Summary\\b.*$/im,\n    [/^\\s*-{3,}\\s*$/m, /^[ \\t]*(?:💡\\s*)?Key Learnings\\b.*$/im]\n  );\n  if (!block) return null;\n\n  return block\n    .replace(/^>+\\s?/gm, \"\")    // strip blockquotes\n    .replace(/\\n{3,}/g, \"\\n\\n\") // collapse extra blank lines\n    .trim();\n}\n\nfunction parseKeyLearnings(src) {\n  const block = extractBetween(\n    src,\n    /^[ \\t]*(?:💡\\s*)?Key Learnings\\b.*$/im,\n    [/^\\s*-{3,}\\s*$/m, /^[ \\t]*(?:📊|🧭|✅|##|\\*\\*)/im] // stop at divider or likely next section\n  );\n  if (!block) return null;\n\n  return block\n    .replace(/^>+\\s?/gm, \"\")    // strip blockquotes\n    .replace(/\\n{3,}/g, \"\\n\\n\") // collapse extra blank lines\n    .trim();\n}\n\nconst items = $input.all();\n\nreturn items.map(item => {\n  const raw = (item.json?.cleanedMarkdown \n               ?? item.json?.content?.parts?.[0]?.text \n               ?? \"\").toString();\n\n  // …your parse helpers…\n\n  const title = parseTitle(raw);\n  const summary = parseSummary(raw);\n  const keyLearnings = parseKeyLearnings(raw);\n\n  return { json: { ...item.json, title, summary, keyLearnings } };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        816,
+        496
+      ],
+      "id": "11ef8ca0-1598-4d78-b7fd-41717964548a",
+      "name": "Code1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a3a52f15-b7d2-4409-857d-c5660f7ed186",
+              "name": "content",
+              "value": "={{$json.cleanedMarkdown  ?? ''}}",
+              "type": "string"
+            },
+            {
+              "id": "11647c25-ed05-4ad1-9c5c-ef2ec358e640",
+              "name": "format",
+              "value": "md",
+              "type": "string"
+            },
+            {
+              "id": "2aed4880-9727-4849-a66d-f72949827eca",
+              "name": "filename",
+              "value": "={{($json.title ?? 'video-brief').toString().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-)|(-$)/g,'')}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1264,
+        496
+      ],
+      "id": "640d3c86-b506-4bf7-a0f7-9d59cacc4be0",
+      "name": "Edit Fields"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get transcript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge2": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Append or update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get transcript": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Markdown": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append or update row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Execute Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Markdown",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Execute Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "cca9f831-f764-44c9-b6e3-cd90e50964ac",
+  "meta": {
+    "instanceId": "475daac84cac0803a26cc78d72459f365d29a76e384de860efeb8e77b778ad67"
+  },
+  "id": "ksyJn9zmPOUY4AOg",
+  "tags": []
+}
